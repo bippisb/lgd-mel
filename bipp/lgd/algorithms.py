@@ -57,7 +57,7 @@ def fuzzy_cosine_scores(input_name: str, candidate_names: List[str], similarity=
     """
     is_str = lambda v: type(v) == str
 
-    if is_str(input_name) and all(map(is_str, candidate_names)):
+    if not is_str(input_name) and not all(map(is_str, candidate_names)):
         raise ValueError("input name and all the candidate names must be of type string.")
     # Compute the fuzzy search score
     fuzzy_scores = [fuzz.token_sort_ratio(
