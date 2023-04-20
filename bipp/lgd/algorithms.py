@@ -26,9 +26,8 @@ def fuzzy_cosine_match(input_name: str, candidate_names: List[str], errors="rais
 
     try:
         scores = fuzzy_cosine_scores(input_name=input_name, candidate_names=candidate_names, **kwargs)
-        scores = [score[1] for score in scores]
         # Find the best matching name based on the combined score
-        best_match = candidate_names[scores.index(max(scores))]
+        best_match = scores[0][0]
 
         # Return the best matching name
         return best_match
@@ -74,6 +73,6 @@ def fuzzy_cosine_scores(input_name: str, candidate_names: List[str], similarity=
                 cosine_similarities[i] for i in range(len(candidate_names))]
 
     # Return the best matching name
-    return list(zip(candidate_names, scores))
+    return sorted(zip(candidate_names, scores), key=lambda v: v[1], reverse=True)
 
 # %%
