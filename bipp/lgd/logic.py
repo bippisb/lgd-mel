@@ -3,20 +3,25 @@ from bipp.lgd.models import Level, Entity, AdminHierarchy, Variation
 from sqlmodel import create_engine, Session, select
 
 # %%
-engine = create_engine("sqlite:///lgd.db")
+engine = create_engine("sqlite:///D:/bippisb/lgd-mel/bipp/lgd/lgd.db")
 gs = Session(engine)
 
 
 # %%
 
 
-def get_exact_match(name: str, level_id: int = None) -> list[Entity]:
+def get_exact_match(name: str, level_id: int = None, parent_id: int = None) -> list[Entity]:
     with Session(engine) as session:
         name = name.strip().lower()
         query = select(Entity).where(Entity.name == name)
         if level_id:
             query = query.where(Entity.level_id == level_id)
-        return session.exec(query).all()
+        if parent_id:
+            query = query \
+                .join(AdminHierarchy, AdminHierarchy.child_id == Entity.id) \
+                .where(AdminHierarchy.entity_id == parent_id)
+
+        return session.exec(query).unique().all()
 
 # %%
 
@@ -78,7 +83,7 @@ def get_variations(entity_id: int) -> list[Variation]:
 # %%
 
 
-def get_matches_using_variations(name: str, level_id: int = None) -> list[tuple[Entity, Variation]]:
+def get_matches_using_variations(name: str, level_id: int = None, parent_id: int = None) -> list[tuple[Entity, Variation]]:
     name = name.strip().lower()
     with Session(engine) as session:
         query = select(Entity, Variation) \
@@ -86,6 +91,10 @@ def get_matches_using_variations(name: str, level_id: int = None) -> list[tuple[
             .join(Entity, Entity.id == Variation.entity_id)
         if level_id:
             query = query.where(Entity.level_id == level_id)
+        if parent_id:
+            query = query \
+                .join(AdminHierarchy, AdminHierarchy.child_id == Entity.id) \
+                .where(AdminHierarchy.entity_id == parent_id)
         return session.exec(query).all()
 
 # %%
@@ -98,34 +107,33 @@ def get_subtree(entity_id):
 # %%
 
 
-def find_exact_match_using_hierarchies(name: str, level: int = None) -> list[Entity]:
-    pass
-
-# %%
-
-
-def get_matches(name: str, level_id: int = None, hierarchy: list[tuple[str, int]] = None) -> list[dict]:
+def get_matches(name: str, level_id: int = None, parent_id: int = None, with_parents: bool = False) -> list[dict]:
     # get exact match
     name = name.strip().lower()
-    matches = get_exact_match(name=name, level_id=level_id)
+    matches = get_exact_match(
+        name=name, level_id=level_id, parent_id=parent_id)
 
     def prepare_repsonse(match: Entity):
-        return dict(
+        r = dict(
             ** match.model_dump(),
-            parents=get_parents(match.id),
         )
+        if with_parents:
+            r["parents"] = get_parents(match.id)
+        return r
 
     if matches:
         return list(map(prepare_repsonse, matches))
 
     # match variations
-    results = get_matches_using_variations(name=name, level_id=level_id)
-    matches = list(map(lambda x: x[0], results))
+    results = get_matches_using_variations(
+        name=name, level_id=level_id, parent_id=parent_id)
+    matches = set(map(lambda x: x[0], results))
     if matches:
         return list(map(prepare_repsonse, matches))
 
+    return []
     # TODO: filter candidates using admin hierarchy
-    
+
     # TODO: get_similar_match
     # TODO: get_similar_variation
 

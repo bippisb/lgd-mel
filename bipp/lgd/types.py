@@ -14,3 +14,4 @@ class AdminLevel(Enum):
 class MatchItem(BaseModel):
     name: str
     level: AdminLevel | None = None
+    parent_id: int | None = None
