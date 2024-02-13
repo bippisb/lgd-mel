@@ -15,3 +15,8 @@ class MatchItem(BaseModel):
     name: str
     level: AdminLevel | None = None
     parent_id: int | None = None
+
+
+class AddVariationPayload(BaseModel):
+    variation: str
+    entity_id: str

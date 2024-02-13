@@ -145,3 +145,21 @@ def get_levels() -> list[Level]:
         query = select(Level)
         return session.exec(query).all()
 # %%
+
+
+def add_variation(variation_name: str, entity_id: int) -> Variation:
+    variation_name = variation_name.strip().lower()
+    with Session(engine) as session:
+        q_entity_exists = select(Entity).where(Entity.id == entity_id)
+        if not session.exec(q_entity_exists).first():
+            raise ValueError("Entity does not exist")
+
+        q_variation_exists = select(Variation).where(
+            Variation.name == variation_name).where(Variation.entity_id == entity_id)
+        if session.exec(q_variation_exists).first():
+            raise ValueError("Variation already exists")
+
+        variation = Variation(name=variation_name, entity_id=entity_id)
+        session.add(variation)
+        session.commit()
+        return variation

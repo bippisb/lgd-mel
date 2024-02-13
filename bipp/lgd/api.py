@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from bipp.lgd.types import MatchItem
-from bipp.lgd.logic import get_matches, get_levels
+from bipp.lgd.types import MatchItem, AddVariationPayload
+
+from bipp.lgd.logic import get_matches, get_levels, add_variation
 
 app = FastAPI()
 
@@ -34,6 +35,7 @@ def lgd_match(item: MatchItem):
     if item.level:
         lvl = item.level.name
         level_id = LevelNameToLevelIdMapping[lvl]
+        print(item)
         matches = get_matches(
             name=name,
             level_id=level_id,
@@ -50,3 +52,13 @@ def lgd_match(item: MatchItem):
         )
         for match in matches
     ]
+
+
+@app.post("/add/variation/")
+def add_variation_endpoint(payload: AddVariationPayload):
+    try:
+        variation = add_variation(
+            variation_name=payload.variation, entity_id=payload.entity_id)
+        return variation
+    except ValueError as e:
+        return HTTPException(status_code=404, detail=e)
