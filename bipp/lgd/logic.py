@@ -154,6 +154,11 @@ def add_variation(variation_name: str, entity_id: int) -> Variation:
         if not session.exec(q_entity_exists).first():
             raise ValueError("Entity does not exist")
 
+        q_entity_name_same_as_variation = select(
+            Entity).where(Entity.name == variation_name)
+        if session.exec(q_entity_name_same_as_variation).first():
+            raise ValueError("Variation name can't be the same as entity name")
+
         q_variation_exists = select(Variation).where(
             Variation.name == variation_name).where(Variation.entity_id == entity_id)
         if session.exec(q_variation_exists).first():
