@@ -30,35 +30,40 @@ def levels():
 
 
 @app.post("/match/entity/")
-def lgd_match(item: MatchItem):
-    name = item.name.strip().lower()
-    if item.level:
-        lvl = item.level.name
-        level_id = LevelNameToLevelIdMapping[lvl]
-        print(item)
-        matches = get_matches(
-            name=name,
-            level_id=level_id,
-            parent_id=item.parent_id,
-        )
+def lgd_match(items: MatchItem | list[MatchItem]):
+    def get_match_for_one_item(item):
+        name = item.name.strip().lower()
+        if item.level:
+            lvl = item.level.name
+            level_id = LevelNameToLevelIdMapping[lvl]
+            matches = get_matches(
+                name=name,
+                level_id=level_id,
+                parent_id=item.parent_id,
+                with_parents=item.with_parents
+            )
+        else:
+            matches = get_matches(name=name, with_parents=item.with_parents)
+        if not matches:
+            return []
+        return [
+            dict(
+                ** match,
+                level=LevelIdToLevelNameMapping[match["level_id"]],
+            )
+            for match in matches
+        ]
+    if isinstance(items, list):
+        return [get_match_for_one_item(item) for item in items]
     else:
-        matches = get_matches(name=name)
-    if not matches:
-        return []
-    return [
-        dict(
-            ** match,
-            level=LevelIdToLevelNameMapping[match["level_id"]],
-        )
-        for match in matches
-    ]
+        return get_match_for_one_item(items)
 
 
 @app.post("/add/variation/")
 def add_variation_endpoint(payload: AddVariationPayload):
     try:
         variation = add_variation(
-            variation_name=payload.variation, entity_id=payload.entity_id)
+            variation_name=payload.variation, entity_id=payload.entity_id, email=payload.email)
         return variation
     except ValueError as e:
         return HTTPException(status_code=404, detail=e)

@@ -1,5 +1,5 @@
 # %%
-from bipp.lgd.models import Level, Entity, AdminHierarchy, Variation
+from bipp.lgd.models import Level, Entity, AdminHierarchy, Variation, DiscoveredVariation
 from sqlmodel import create_engine, Session, select
 
 # %%
@@ -147,8 +147,9 @@ def get_levels() -> list[Level]:
 # %%
 
 
-def add_variation(variation_name: str, entity_id: int) -> Variation:
+def add_variation(variation_name: str, entity_id: int, email: str) -> Variation:
     variation_name = variation_name.strip().lower()
+    email = email.strip().lower()
     with Session(engine) as session:
         q_entity_exists = select(Entity).where(Entity.id == entity_id)
         if not session.exec(q_entity_exists).first():
@@ -164,7 +165,8 @@ def add_variation(variation_name: str, entity_id: int) -> Variation:
         if session.exec(q_variation_exists).first():
             raise ValueError("Variation already exists")
 
-        variation = Variation(name=variation_name, entity_id=entity_id)
+        variation = DiscoveredVariation(
+            name=variation_name, entity_id=entity_id, email=email)
         session.add(variation)
         session.commit()
         return variation

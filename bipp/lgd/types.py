@@ -15,8 +15,10 @@ class MatchItem(BaseModel):
     name: str
     level: AdminLevel | None = None
     parent_id: int | None = None
+    with_parents: bool = False
 
 
 class AddVariationPayload(BaseModel):
     variation: str
     entity_id: str
+    email: str
