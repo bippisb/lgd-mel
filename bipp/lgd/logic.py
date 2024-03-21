@@ -166,7 +166,7 @@ def add_variation(variation_name: str, entity_id: int, email: str) -> Variation:
             raise ValueError("Variation already exists")
 
         variation = DiscoveredVariation(
-            name=variation_name, entity_id=entity_id, email=email)
+            name=variation_name, entity_id=entity_id, proposer_email=email)
         session.add(variation)
         session.commit()
         return variation
