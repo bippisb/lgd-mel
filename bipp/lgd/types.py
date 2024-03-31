@@ -15,7 +15,12 @@ class MatchItem(BaseModel):
     name: str
     level: AdminLevel | None = None
     parent_id: int | None = None
+
+
+class GetLGDMatchPayload(BaseModel):
     with_parents: bool = False
+    with_community_variations: bool = False
+    items: list[MatchItem]
 
 
 class AddVariationPayload(BaseModel):

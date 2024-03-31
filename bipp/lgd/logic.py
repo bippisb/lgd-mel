@@ -83,19 +83,33 @@ def get_variations(entity_id: int) -> list[Variation]:
 # %%
 
 
-def get_matches_using_variations(name: str, level_id: int = None, parent_id: int = None) -> list[tuple[Entity, Variation]]:
+def get_matches_using_variations(name: str, level_id: int = None, parent_id: int = None, use_community_variations: bool = False) -> list[tuple[Entity, Variation]]:
     name = name.strip().lower()
-    with Session(engine) as session:
-        query = select(Entity, Variation) \
-            .where(Variation.name == name) \
-            .join(Entity, Entity.id == Variation.entity_id)
+
+    def build_query(M: Variation | DiscoveredVariation):
+        query = select(Entity, M) \
+            .where(M.name == name) \
+            .join(Entity, Entity.id == M.entity_id)
+
         if level_id:
             query = query.where(Entity.level_id == level_id)
         if parent_id:
             query = query \
                 .join(AdminHierarchy, AdminHierarchy.child_id == Entity.id) \
                 .where(AdminHierarchy.entity_id == parent_id)
-        return session.exec(query).all()
+
+        return query
+
+    with Session(engine) as session:
+        query = build_query(Variation)
+        results = session.exec(query).all()
+        if not use_community_variations:
+            return results
+        if len(results) == 0:
+            query = build_query(DiscoveredVariation)
+            results = session.exec(query).all()
+            return results
+        return []
 
 # %%
 
@@ -107,7 +121,13 @@ def get_subtree(entity_id):
 # %%
 
 
-def get_matches(name: str, level_id: int = None, parent_id: int = None, with_parents: bool = False) -> list[dict]:
+def get_matches(
+    name: str,
+    level_id: int = None,
+    parent_id: int = None,
+    with_parents: bool = False,
+    with_community_variations: bool = False,
+) -> list[dict]:
     # get exact match
     name = name.strip().lower()
     matches = get_exact_match(
@@ -118,7 +138,17 @@ def get_matches(name: str, level_id: int = None, parent_id: int = None, with_par
             ** match.model_dump(),
         )
         if with_parents:
-            r["parents"] = get_parents(match.id)
+            levels = get_levels()
+            def get_level_name(id): return [
+                lvl for lvl in levels if lvl.id == id][0].name
+            parents = get_parents(match.id)
+            r["parents"] = [
+                dict(
+                    **p.model_dump(),
+                    level=get_level_name(p.level_id),
+                )
+                for p in parents
+            ]
         return r
 
     if matches:
@@ -126,7 +156,7 @@ def get_matches(name: str, level_id: int = None, parent_id: int = None, with_par
 
     # match variations
     results = get_matches_using_variations(
-        name=name, level_id=level_id, parent_id=parent_id)
+        name=name, level_id=level_id, parent_id=parent_id, use_community_variations=with_community_variations)
     matches = set(map(lambda x: x[0], results))
     if matches:
         return list(map(prepare_repsonse, matches))

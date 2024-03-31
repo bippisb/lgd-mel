@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from bipp.lgd.types import MatchItem, AddVariationPayload
+from bipp.lgd.types import AddVariationPayload, GetLGDMatchPayload
 
 from bipp.lgd.logic import get_matches, get_levels, add_variation
 
@@ -30,7 +30,9 @@ def levels():
 
 
 @app.post("/match/entity/")
-def lgd_match(items: MatchItem | list[MatchItem]):
+def lgd_match(payload: GetLGDMatchPayload):
+    items = payload.items
+
     def get_match_for_one_item(item):
         name = item.name.strip().lower()
         if item.level:
@@ -40,12 +42,14 @@ def lgd_match(items: MatchItem | list[MatchItem]):
                 name=name,
                 level_id=level_id,
                 parent_id=item.parent_id,
-                with_parents=item.with_parents
+                with_parents=payload.with_parents,
+                with_community_variations=payload.with_community_variations
             )
         else:
-            matches = get_matches(name=name, with_parents=item.with_parents)
+            matches = get_matches(name=name, with_parents=payload.with_parents,
+                                  with_community_variations=payload.with_community_variations)
         if not matches:
-            return []
+            return None
         return [
             dict(
                 ** match,
@@ -53,10 +57,7 @@ def lgd_match(items: MatchItem | list[MatchItem]):
             )
             for match in matches
         ]
-    if isinstance(items, list):
-        return [get_match_for_one_item(item) for item in items]
-    else:
-        return get_match_for_one_item(items)
+    return [get_match_for_one_item(item) for item in items]
 
 
 @app.post("/add/variation/")
