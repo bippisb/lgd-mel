@@ -111,6 +111,27 @@ def get_matches_using_variations(name: str, level_id: int = None, parent_id: int
             return results
         return []
 
+
+# %%
+
+
+def get_matches_using_community_variations(name: str, level_id: int = None, parent_id: int = None) -> list[tuple[Entity, DiscoveredVariation]]:
+    query = select(Entity, DiscoveredVariation) \
+        .where(DiscoveredVariation.name == name) \
+        .join(Entity, Entity.id == DiscoveredVariation.entity_id)
+
+    if level_id:
+        query = query.where(Entity.level_id == level_id)
+    if parent_id:
+        query = query \
+            .join(AdminHierarchy, AdminHierarchy.child_id == Entity.id) \
+            .where(AdminHierarchy.entity_id == parent_id)
+    with Session(engine) as session:
+        results = session.exec(query).all()
+        matches = set(map(lambda x: x[0], results))
+        return [r.model_dump() for r in matches]
+
+
 # %%
 
 
