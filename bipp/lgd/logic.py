@@ -3,7 +3,7 @@ from bipp.lgd.models import Level, Entity, AdminHierarchy, Variation, Discovered
 from sqlmodel import create_engine, Session, select
 
 # %%
-engine = create_engine("sqlite:///D:/bippisb/lgd-mel/bipp/lgd/lgd.db")
+engine = create_engine("sqlite:///./lgd.db")
 gs = Session(engine)
 
 
@@ -203,12 +203,11 @@ def add_variation(variation_name: str, entity_id: int, email: str) -> Variation:
     email = email.strip().lower()
     with Session(engine) as session:
         q_entity_exists = select(Entity).where(Entity.id == entity_id)
-        if not session.exec(q_entity_exists).first():
+        match= session.exec(q_entity_exists).first()
+        if not match:
             raise ValueError("Entity does not exist")
 
-        q_entity_name_same_as_variation = select(
-            Entity).where(Entity.name == variation_name)
-        if session.exec(q_entity_name_same_as_variation).first():
+        if match.name == variation_name:
             raise ValueError("Variation name can't be the same as entity name")
 
         q_variation_exists = select(Variation).where(
